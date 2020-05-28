@@ -56,3 +56,7 @@ const runCommand = async(ssh,command,args,path)=>{
 }
 
 init();
+
+module.exports = {
+	newVM,
+}
