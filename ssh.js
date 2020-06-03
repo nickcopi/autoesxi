@@ -2,27 +2,100 @@ require('dotenv').config();
 const fs = require('fs');
 const template = fs.readFileSync('template.vmx').toString();
 const NodeSSH = require('node-ssh');
+const cachePath = '/vmCache.json';
 
 const init = async ()=>{
 	const ssh = await newConnection();
 	const ls = await runCommand(ssh,'ls');
 	await newVM('test2');
+	//await removeVM('test2');
 	console.log('disposing...');
 	ssh.dispose();
 }
 
+/*
+ * Read VM cache from remote disk and return object
+ * */
+const getVMCache = async (ssh)=>{
+	let newSession = false;
+	if(!ssh){
+		ssh = await newConnection();
+		newSession = true;
+	}
+	await runCommand(ssh,'touch',[cachePath]);
+	const cache = await runCommand(ssh,'cat',[cachePath]);
+	if(newSession) ssh.dispose();
+	try{
+		return JSON.parse(cache);
+	}
+	catch(e){
+		return {};
+	}
+}
 
+
+/*
+ * Write cache object to remote disk
+ * */
+//please don't run this concurrently with itself, ever, thanks
+const saveVMCache = async(ssh,cache)=>{
+	let newSession = false;
+	if(!ssh){
+		ssh = await newConnection();
+		newSession = true;
+	}
+	const tempFilePath = process.env.temp + '/vmCache.json';
+	fs.writeFileSync(tempFilePath, JSON.stringify(cache));
+	await ssh.putFile(tempFilePath, cachePath);
+	fs.unlinkSync(tempFilePath);
+	if(newSession) ssh.dispose();
+}
+
+/*
+ * Create and track a VM based on a name and save it in a cache
+ * */
 const newVM = async(name)=>{
 	const ssh = await newConnection();
 	const path = process.env.STORE_PATH;
 	const tempFilePath = process.env.temp + '/' + name + '.vmx';
 	const vmxPath = path + '/' + name + '/' + name + '.vmx';
+	const cache = await getVMCache(ssh);
+	if(name in cache){
+		console.error(`Error: there is already a VM registered for ${name}!`);
+		ssh.dispose();
+		return false;
+	}
 	fs.writeFileSync(tempFilePath, replace(template,'{{name}}',name));
 	await runCommand(ssh,'mkdir', ['-p',name], path);
 	await runCommand(ssh,'cp', [process.env.IMAGE_PATH,name + '.vmdk'], path + '/' + name);
 	await ssh.putFile(tempFilePath, vmxPath);
-	await runCommand(ssh,'vim-cmd', ['solo/registervm',vmxPath]);
+	const id = await runCommand(ssh,'vim-cmd', ['solo/registervm',vmxPath]);
 	fs.unlinkSync(tempFilePath);
+	cache[name] = id;
+	await saveVMCache(ssh,cache);
+	ssh.dispose();
+	return true;
+}
+
+
+/*
+ * Remove a tracked VM based on a name and remove it crom cache
+ * */
+const removeVM = async(name)=>{
+	const ssh = await newConnection();
+	const vmPath = process.env.STORE_PATH + '/' + name;
+	const cache = await getVMCache(ssh);
+	if(!(name in cache)){
+		console.error(`Error: there is no VM registered for ${name}!`);
+		ssh.dispose();
+		return false;
+	}
+	await runCommand(ssh,'vim-cmd', ['/vmsvc/unregister', cache[name]]);
+	//await runCommand(ssh,'rm',['-r',vmPath]));
+	delete cache[name];
+	saveVMCache(ssh,cache);
+	ssh.dispose();
+	return true;
 }
 
 const newConnection = async()=>{
