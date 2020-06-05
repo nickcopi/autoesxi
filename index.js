@@ -1,13 +1,14 @@
 require('dotenv').config();
-const express = require('express');
 const esxi = require('./ssh');
-const app = express();
-const port = process.env.PORT || 8080;
+const {argv} = require('yargs')
+	.option('package',{
+		alias:['n','p','name'],
+		describe:'Name of package for which to create a Cloudpaging Studio VM.',
+		demandOption:true
+	})
+	.option('host',{
+		alias:['h'],
+		describe:'ESXI host address on which to create the VM.',
+		demandOption:true
+	})
 
-app.get('/',(req,res)=>{
-	res.send('ok');
-});
-
-app.listen(port,()=>{
-	console.log(`Listening on port ${port}.`);
-});
