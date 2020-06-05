@@ -7,8 +7,8 @@ const cachePath = '/vmCache.json';
 const init = async ()=>{
 	const ssh = await newConnection();
 	const ls = await runCommand(ssh,'ls');
-	await newVM('test2');
-	//await removeVM('test2');
+	//await newVM('test2');
+	await removeVM('test2');
 	console.log('disposing...');
 	ssh.dispose();
 }
@@ -70,6 +70,11 @@ const newVM = async(name)=>{
 	await runCommand(ssh,'cp', [process.env.IMAGE_PATH,name + '.vmdk'], path + '/' + name);
 	await ssh.putFile(tempFilePath, vmxPath);
 	const id = await runCommand(ssh,'vim-cmd', ['solo/registervm',vmxPath]);
+	if(isNaN(Number(id))){
+		console.error(`Error: VM registration failed: ${id}`);
+		ssh.dispose();
+		return false;
+	}
 	fs.unlinkSync(tempFilePath);
 	cache[name] = id;
 	await saveVMCache(ssh,cache);
@@ -93,7 +98,7 @@ const removeVM = async(name)=>{
 	await runCommand(ssh,'vim-cmd', ['/vmsvc/unregister', cache[name]]);
 	//await runCommand(ssh,'rm',['-r',vmPath]));
 	delete cache[name];
-	saveVMCache(ssh,cache);
+	await saveVMCache(ssh,cache);
 	ssh.dispose();
 	return true;
 }
