@@ -56,14 +56,29 @@ const init = async ()=>{
 		}
 	}
 	console.log(argv);
+	const promptOptions = [];
 	Object.entries(options).forEach(([k,v])=>{
 		if((!(k in argv)) && !v.ignorable){
-			prompt.start();
-			prompt.get(k,(err,res)=>{
-				console.log(err,res);
+			promptOptions.push({
+				name:k,
+				description:v.describe,
+				type:'string',
+				required:true
 			});
-			//prompt.stop();
 		}
+	});
+	promptOptions.push({
+		hidden:true,
+		name:'SSH_PASS',
+		description:'Password for authenticating with ESXI host. (Will not be echoed.)'
+	});
+	prompt.start();
+	prompt.message = '';
+	prompt.delimiter = '';
+	prompt.get(promptOptions,(err,res)=>{
+		if(err) console.error(err);
+		argv = {...argv,...res};
+		console.log(argv);
 	});
 }
 init();
