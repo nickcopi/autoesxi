@@ -45,6 +45,18 @@ Object.entries(options).forEach(([k,v])=>{
 });
 let argv = yargs.argv;
 
+//async method for getting input
+const getInput = (prompt,promptOptions)=>{
+	return new Promise((resolve,reject)=>{
+		prompt.get(promptOptions,(err,res)=>{
+			//i have no idea what kind of error could possibley happen. Maybe reject() on error could be valid but eh
+			if(err) console.error(err);
+			resolve(res);
+		});
+	});
+
+}
+
 const init = async ()=>{
 	if(argv.CONFIG){
 		try{
@@ -75,10 +87,7 @@ const init = async ()=>{
 	prompt.start();
 	prompt.message = '';
 	prompt.delimiter = '';
-	prompt.get(promptOptions,(err,res)=>{
-		if(err) console.error(err);
-		argv = {...argv,...res};
-		console.log(argv);
-	});
+	const promptResults = await getInput(prompt,promptOptions);
+	console.log(promptResults);
 }
 init();
