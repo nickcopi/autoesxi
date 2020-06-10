@@ -84,10 +84,28 @@ const init = async ()=>{
 		name:'SSH_PASS',
 		description:'Password for authenticating with ESXI host. (Will not be echoed.)'
 	});
+	if(promptOptions.length){
+		promptOptions.push({
+			name:'SAVE',
+			description:'Write options out to a config.json file? (Will overwrite!) [y/N]'
+		});
+	}
 	prompt.start();
 	prompt.message = '';
 	prompt.delimiter = '';
 	const promptResults = await getInput(prompt,promptOptions);
-	console.log(promptResults);
+	process.env = {...process.env,...argv,...promptResults};
+	if(process.env.SAVE.toLowerCase() === 'y'){
+		const config = {};
+		Object.entries(options).forEach(([k,v])=>{
+			if(!v.ignorable){
+				config[k] = process.env[k];
+			}
+
+		});
+		fs.writeFileSync('config.json',JSON.stringify(config,null,2));
+		
+	}
+	//console.log(promptResults);
 }
 init();
