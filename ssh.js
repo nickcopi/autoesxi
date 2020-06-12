@@ -23,7 +23,7 @@ const getVMCache = async (ssh)=>{
 		newSession = true;
 	}
 	//await runCommand(ssh,'touch',[cachePath]);
-	const cache = await runCommand(ssh,'Get-VM | ConvertTo-JSON');
+	const cache = await runCommand(ssh,'Get-VM | ConvertTo-JSON',null,null,true);
 	if(newSession) ssh.dispose();
 	try{
 		return JSON.parse(cache);
@@ -82,15 +82,21 @@ const removeVM = async(name)=>{
 	console.log('Checking cache....');
 	if(!cache.includes(name)){
 		console.error(`Error: there is no VM registered for ${name}!`);
-		await ssh.dispose();
+		await dispose(ssh);
 		return false;
 	}
 	console.log('Stopping VM....');
 	await runCommand(ssh,'Stop-VM', ['-Name',name,'-TurnOff']);
 	console.log('Deregistering VM....');
 	await runCommand(ssh,'Remove-VM', ['-Name',name,'-Force']);
-	await ssh.dispose();
+	await dispose(ssh);
 	return true;
+}
+
+const dispose = async ssh=>{
+	try{
+		(await ssh.dispose());
+	} catch (e){}
 }
 
 const newConnection = async()=>{
@@ -117,10 +123,15 @@ const replace = (template,tag,filler) =>{
 	return result;
 }
 
-const runCommand = async(ssh,command,args,path)=>{
+const runCommand = async(ssh,command,args,path,getOutput)=>{
 	if(!args) args = [];
 	if(!path) path = '/';
-	return await ssh.exec(command, args, { cwd: path, stream: 'stdout', options: { pty: true } }).catch(e=>console.error(e));
+	//if(!getOutput){
+	//	command = command + ' ' + args.join(' ') + ' > $null';
+	//	args = [];
+	//	return await ssh.exec(command, args, { cwd: path}).catch(e=>console.error(e));
+	//}
+	return await ssh.exec(command, args, { cwd: path, stream: 'stdout'}).catch(e=>console.error(e));
 }
 
 init();
