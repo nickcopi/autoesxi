@@ -5,12 +5,12 @@ const NodeSSH = require('node-ssh');
 const cachePath = '/vmCache.json';
 
 const init = async ()=>{
-	//const ssh = await newConnection();
-	//const ls = await runCommand(ssh,'ls');
+	const ssh = await newConnection();
+	const ls = await runCommand(ssh,'ls');
 	//await newVM('test2');
 	await removeVM('test2');
 	console.log('disposing...');
-	//ssh.dispose();
+	ssh.dispose();
 }
 
 /*
@@ -22,8 +22,8 @@ const getVMCache = async (ssh)=>{
 		ssh = await newConnection();
 		newSession = true;
 	}
-	//await runCommand(ssh,'touch',[cachePath]);
-	const cache = await runCommand(ssh,'Get-VM | ConvertTo-JSON');
+	await runCommand(ssh,'touch',[cachePath]);
+	const cache = await runCommand(ssh,'cat',[cachePath]);
 	if(newSession) ssh.dispose();
 	try{
 		return JSON.parse(cache);
@@ -57,17 +57,28 @@ const saveVMCache = async(ssh,cache)=>{
 const newVM = async(name)=>{
 	const ssh = await newConnection();
 	const path = process.env.STORE_PATH;
-	const cache = (await getVMCache(ssh)).map(vm=>vm.VMName);
-	console.log(cache);
-	if(cache.includes(name)){
+	const tempFilePath = process.env.temp + '/' + name + '.vmx';
+	const vmxPath = path + '/' + name + '/' + name + '.vmx';
+	const cache = await getVMCache(ssh);
+	if(name in cache){
 		console.error(`Error: there is already a VM registered for ${name}!`);
-		await ssh.dispose();
+		ssh.dispose();
 		return false;
 	}
-	console.log(await runCommand(ssh,'New-VM',['-Name', name, '-MemoryStartupBytes' ,'4GB', '-Generation', '2' ,'-VHDPath', 'd:\\test.vhdx']));
-	console.log(await runCommand(ssh,'Set-VM -Name ' +  name + ' -AutomaticCheckpointsEnabled $false'));
-	await runCommand(ssh,'Start-VM', ['-Name', name]);
-	await ssh.dispose();
+	fs.writeFileSync(tempFilePath, replace(template,'{{name}}',name));
+	await runCommand(ssh,'mkdir', ['-p',name], path);
+	await runCommand(ssh,'cp', [process.env.IMAGE_PATH,name + '.vmdk'], path + '/' + name);
+	await ssh.putFile(tempFilePath, vmxPath);
+	const id = await runCommand(ssh,'vim-cmd', ['solo/registervm',vmxPath]);
+	if(isNaN(Number(id))){
+		console.error(`Error: VM registration failed: ${id}`);
+		ssh.dispose();
+		return false;
+	}
+	fs.unlinkSync(tempFilePath);
+	cache[name] = id;
+	await saveVMCache(ssh,cache);
+	ssh.dispose();
 	return true;
 }
 
@@ -78,18 +89,17 @@ const newVM = async(name)=>{
 const removeVM = async(name)=>{
 	const ssh = await newConnection();
 	const vmPath = process.env.STORE_PATH + '/' + name;
-	const cache = (await getVMCache(ssh)).map(vm=>vm.VMName);
-	console.log('Checking cache....');
-	if(!cache.includes(name)){
+	const cache = await getVMCache(ssh);
+	if(!(name in cache)){
 		console.error(`Error: there is no VM registered for ${name}!`);
-		await ssh.dispose();
+		ssh.dispose();
 		return false;
 	}
-	console.log('Stopping VM....');
-	await runCommand(ssh,'Stop-VM', ['-Name',name,'-TurnOff']);
-	console.log('Deregistering VM....');
-	await runCommand(ssh,'Remove-VM', ['-Name',name,'-Force']);
-	await ssh.dispose();
+	await runCommand(ssh,'vim-cmd', ['/vmsvc/unregister', cache[name]]);
+	//await runCommand(ssh,'rm',['-r',vmPath]));
+	delete cache[name];
+	await saveVMCache(ssh,cache);
+	ssh.dispose();
 	return true;
 }
 
