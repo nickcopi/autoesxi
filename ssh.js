@@ -57,8 +57,8 @@ const saveVMCache = async(ssh,cache)=>{
 const newVM = async(name)=>{
 	const ssh = await newConnection();
 	const newImage = process.env.STORE_PATH + '\\' +  name + '.vhdx';
+	console.log('Checking cache....');
 	const cache = (await getVMCache(ssh)).map(vm=>vm.VMName);
-	console.log(cache);
 	if(cache.includes(name)){
 		console.error(`Error: there is already a VM registered for ${name}!`);
 		await ssh.dispose();
@@ -83,8 +83,8 @@ const newVM = async(name)=>{
 const removeVM = async(name)=>{
 	const ssh = await newConnection();
 	const imagePath = process.env.STORE_PATH + '\\' +  name + '.vhdx';
-	const cache = (await getVMCache(ssh)).map(vm=>vm.VMName);
 	console.log('Checking cache....');
+	const cache = (await getVMCache(ssh)).map(vm=>vm.VMName);
 	if(!cache.includes(name)){
 		console.error(`Error: there is no VM registered for ${name}!`);
 		await dispose(ssh);
@@ -94,8 +94,13 @@ const removeVM = async(name)=>{
 	await runCommand(ssh,'Stop-VM', ['-Name',name,'-TurnOff']);
 	console.log('Deregistering VM....');
 	await runCommand(ssh,'Remove-VM', ['-Name',name,'-Force']);
-	console.log('Removing Disk....');
-	await runCommand(ssh,'rm', [imagePath]);
+	if(process.env.SAVE_VM){
+		console.log('Backing up VM image....');
+		await runCommand(ssh,'mv', [imagePath,process.env.DUMP_PATH]);
+	} else {
+		console.log('Removing Disk....');
+		await runCommand(ssh,'rm', [imagePath]);
+	}
 	await dispose(ssh);
 	return true;
 }
