@@ -46,7 +46,6 @@ const getVMCache = async (ssh)=>{
  * */
 const newVM = async(name)=>{
 	const ssh = await newConnection();
-	const newImage = process.env.STORE_PATH + '\\' +  name + '.vhdx';
 	console.log('Checking cache....');
 	const cache = (await getVMCache(ssh)).map(vm=>vm.VMName);
 	if(cache.includes(name)){
@@ -54,7 +53,7 @@ const newVM = async(name)=>{
 		await ssh.dispose();
 		return false;
 	}
-	const result = await createVM(ssh,name,newImage);
+	const result = await createVM(ssh,name,process.env.IMAGE_PATH);
 	await ssh.dispose();
 	return result;
 }
@@ -79,11 +78,12 @@ const restoreVM = async(name)=>{
 
 
 
-const createVM = async (ssh,name, imagePath)=>{
+const createVM = async (ssh,name, sourceDisk)=>{
+	const newDiskPath = process.env.STORE_PATH + '\\' +  name + '.vhdx';
 	console.log('Copying disk for new VM...');
-	await runCommand(ssh,'cp',[process.env.IMAGE_PATH,imagePath]);
+	await runCommand(ssh,'cp',[sourceDisk,newDiskPath]);
 	console.log('Registering new VM...');
-	await runCommand(ssh,'New-VM',['-Name', name, '-MemoryStartupBytes' ,'8GB', '-Generation', '2' ,'-VHDPath', imagePath]);
+	await runCommand(ssh,'New-VM',['-Name', name, '-MemoryStartupBytes' ,'8GB', '-Generation', '2' ,'-VHDPath', newDiskPath,'-SwitchName',process.env.SWITCH_NAME]);
 	console.log('Configuring new VM...');
 	await runCommand(ssh,'Set-VM -Name ' +  name + ' -AutomaticCheckpointsEnabled $false -ProcessorCount 4');
 	console.log('Starting new VM...');
