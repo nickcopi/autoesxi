@@ -2,15 +2,22 @@ require('dotenv').config();
 const fs = require('fs');
 const template = fs.readFileSync('template.vmx').toString();
 const NodeSSH = require('node-ssh');
-const cachePath = '/vmCache.json';
 
 const init = async ()=>{
 	//const ssh = await newConnection();
 	//const ls = await runCommand(ssh,'ls');
 	//await newVM('test2');
 	await removeVM('test2');
+	//await restoreVM('test2');
+	//console.log(await getRestorable());
 	console.log('disposing...');
 	//ssh.dispose();
+}
+
+
+
+const getVMs = async ()=>{
+	return await getVMCache();
 }
 
 /*
@@ -35,23 +42,6 @@ const getVMCache = async (ssh)=>{
 
 
 /*
- * Write cache object to remote disk
- * */
-//please don't run this concurrently with itself, ever, thanks
-const saveVMCache = async(ssh,cache)=>{
-	let newSession = false;
-	if(!ssh){
-		ssh = await newConnection();
-		newSession = true;
-	}
-	const tempFilePath = process.env.temp + '/vmCache.json';
-	fs.writeFileSync(tempFilePath, JSON.stringify(cache));
-	await ssh.putFile(tempFilePath, cachePath);
-	fs.unlinkSync(tempFilePath);
-	if(newSession) ssh.dispose();
-}
-
-/*
  * Create and track a VM based on a name and save it in a cache
  * */
 const newVM = async(name)=>{
@@ -64,17 +54,42 @@ const newVM = async(name)=>{
 		await ssh.dispose();
 		return false;
 	}
-	console.log('Copying disk for new VM...');
-	console.log(await runCommand(ssh,'cp',[process.env.IMAGE_PATH,newImage]));
-	console.log('Registering new VM...');
-	console.log(await runCommand(ssh,'New-VM',['-Name', name, '-MemoryStartupBytes' ,'8GB', '-Generation', '2' ,'-VHDPath', newImage]));
-	console.log('Configuring new VM...');
-	console.log(await runCommand(ssh,'Set-VM -Name ' +  name + ' -AutomaticCheckpointsEnabled $false -ProcessorCount 4'));
-	console.log('Starting new VM...');
-	await runCommand(ssh,'Start-VM', ['-Name', name]);
+	const result = await createVM(ssh,name,newImage);
 	await ssh.dispose();
-	return true;
+	return result;
 }
+
+/*
+ * Restore a VM based on name
+ * */
+const restoreVM = async(name)=>{
+	const ssh = await newConnection();
+	const oldImage = process.env.DUMP_PATH + '\\' +  name + '.vhdx';
+	console.log('Checking cache....');
+	const cache = await getRestorable(ssh);
+	if(!cache.includes(name + '.vhdx')){
+		console.error(`Error: there is no VM restorable for ${name}!`);
+		await ssh.dispose();
+		return false;
+	}
+	const result = await createVM(ssh,name,oldImage);
+	await ssh.dispose();
+	return result;
+}
+
+
+
+const createVM = async (ssh,name, imagePath)=>{
+	console.log('Copying disk for new VM...');
+	await runCommand(ssh,'cp',[process.env.IMAGE_PATH,imagePath]);
+	console.log('Registering new VM...');
+	await runCommand(ssh,'New-VM',['-Name', name, '-MemoryStartupBytes' ,'8GB', '-Generation', '2' ,'-VHDPath', imagePath]);
+	console.log('Configuring new VM...');
+	await runCommand(ssh,'Set-VM -Name ' +  name + ' -AutomaticCheckpointsEnabled $false -ProcessorCount 4');
+	console.log('Starting new VM...');
+	await runCommand(ssh,'Start-VM', ['-Name', name,'-ErrorAction', 'SilentlyContinue']);
+}
+
 
 
 /*
@@ -91,12 +106,12 @@ const removeVM = async(name)=>{
 		return false;
 	}
 	console.log('Stopping VM....');
-	await runCommand(ssh,'Stop-VM', ['-Name',name,'-TurnOff']);
+	await runCommand(ssh,'Stop-VM', ['-Name',name,'-TurnOff','-ErrorAction', 'SilentlyContinue']);
 	console.log('Deregistering VM....');
-	await runCommand(ssh,'Remove-VM', ['-Name',name,'-Force']);
+	await runCommand(ssh,'Remove-VM', ['-Name',name,'-Force','-ErrorAction', 'SilentlyContinue']);
 	if(process.env.SAVE_VM){
 		console.log('Backing up VM image....');
-		await runCommand(ssh,'mv', [imagePath,process.env.DUMP_PATH]);
+		await runCommand(ssh,'mv', ['-Force',imagePath,process.env.DUMP_PATH]);
 	} else {
 		console.log('Removing Disk....');
 		await runCommand(ssh,'rm', [imagePath]);
@@ -109,6 +124,30 @@ const dispose = async ssh=>{
 	try{
 		(await ssh.dispose());
 	} catch (e){}
+}
+
+/*
+ * Get a list of restorable VMs we have images for
+ * */
+const getRestorable = async ssh=>{
+	let newSession = false;
+	if(!ssh){
+		ssh = await newConnection();
+		newSession = true;
+	}
+	//await runCommand(ssh,'touch',[cachePath]);
+	const cache = await runCommand(ssh,`Get-ChildItem -Path '${process.env.DUMP_PATH}' -Name '*' -File | ConvertTo-JSON`,null,process.env.DUMP_PATH);
+	if(newSession) ssh.dispose();
+	if(!cache) return [];
+	try{
+		const list = JSON.parse(cache);//.map(item=>item.Name);
+		if(!list.length) return [list.value];
+		return list.map(item=>item.value);
+	}
+	catch(e){
+		return {};
+	}
+
 }
 
 const newConnection = async()=>{
@@ -150,4 +189,6 @@ init();
 
 module.exports = {
 	newVM,
+	getVMs,
+
 }
