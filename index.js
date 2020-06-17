@@ -13,6 +13,7 @@ require('dotenv').config();
 const fs = require('fs');
 const prompt = require('prompt');
 const yargs = require('yargs');
+const actions = ['new','remove','restore','list'];
 const options ={
 	'PACKAGE':{
 		alias:['package','n','p','name'],
@@ -38,6 +39,12 @@ const options ={
 		alias:['config','c'],
 		describe:'Path to a config.json file that can help fill in some of the options here for easy use.',
 		ignorable:true
+	},
+	'ACTION':{
+		alias:['action','a'],
+		describe:'Action to complete on hypervisor.',
+		choices:actions,
+		ignorable:true
 	}
 }
 Object.entries(options).forEach(([k,v])=>{
@@ -50,13 +57,34 @@ const getInput = (prompt,promptOptions)=>{
 	return new Promise((resolve,reject)=>{
 		prompt.get(promptOptions,(err,res)=>{
 			//i have no idea what kind of error could possibley happen. Maybe reject() on error could be valid but eh
-			if(err) console.error(err);
+			//if(err) console.error(err);
 			resolve(res);
 		});
 	});
 
 }
 
+//get action input
+const getAction = (prompt)=>{
+	return new Promise((resolve,reject)=>{
+		prompt.get({
+			name: 'action',
+			description: options['ACTION'].describe,
+			type:'string',
+			required:true,
+			message:'Action must be one of ' + actions.join(', ') + '.',
+			conform:(action)=>{
+				//console.log(action);
+				return actions.includes(action);
+			}
+		},(err,res)=>{
+			//i have no idea what kind of error could possibley happen. Maybe reject() on error could be valid but eh
+			//if(err) console.error(err);
+			resolve(res);
+		});
+	});
+
+}
 const init = async ()=>{
 	if(argv.CONFIG){
 		try{
@@ -93,6 +121,7 @@ const init = async ()=>{
 	prompt.start();
 	prompt.message = '';
 	prompt.delimiter = '';
+	if(!('action' in argv)) argv.action = (await getAction(prompt).catch(e=>console.error(e))).action;
 	const promptResults = await getInput(prompt,promptOptions);
 	process.env = {...process.env,...argv,...promptResults};
 	if(process.env.SAVE.toLowerCase() === 'y'){
@@ -108,4 +137,4 @@ const init = async ()=>{
 	}
 	//console.log(promptResults);
 }
-init();
+init().catch(e=>{});
