@@ -43,7 +43,7 @@ const options ={
 	'DUMP_PATH':{
 		alias:['dump','d'],
 		describe:'Path on HyperV host to store disk images after they have been removed so they can later be restored.',
-		modes:['new','list']
+		modes:['restore','remove','list']
 	},
 	'SWITCH_NAME':{
 		alias:['switch'],
@@ -90,7 +90,7 @@ const getAction = (prompt)=>{
 	return new Promise((resolve,reject)=>{
 		prompt.get({
 			name: 'action',
-			description: options['ACTION'].describe,
+			description: options['ACTION'].describe + ' [' + actions.join(', ') + ']',
 			type:'string',
 			required:true,
 			message:'Action must be one of ' + actions.join(', ') + '.',
@@ -116,9 +116,13 @@ const init = async ()=>{
 			console.error('Failed to read config file, ' + e);
 		}
 	}
+	prompt.start();
+	prompt.message = '';
+	prompt.delimiter = '';
+	if(!('action' in argv)) argv.action = (await getAction(prompt).catch(e=>console.error(e))).action;
 	const promptOptions = [];
 	Object.entries(options).forEach(([k,v])=>{
-		if((!(k in argv)) && !v.ignorable){
+		if((!(k in argv)) && v.modes && v.modes.includes(argv.action)){
 			promptOptions.push({
 				name:k,
 				description:v.describe,
@@ -138,10 +142,6 @@ const init = async ()=>{
 			description:'Write options out to a config.json file? (Will overwrite!) [y/N]'
 		});
 	}
-	prompt.start();
-	prompt.message = '';
-	prompt.delimiter = '';
-	if(!('action' in argv)) argv.action = (await getAction(prompt).catch(e=>console.error(e))).action;
 	const promptResults = await getInput(prompt,promptOptions);
 	process.env = {...process.env,...argv,...promptResults};
 	if(process.env.SAVE.toLowerCase() === 'y'){
