@@ -8,11 +8,13 @@
  *
  * */
 
-require('dotenv').config();
+//require('dotenv').config();
+process.on('uncaughtException', ()=>{});
 //const esxi = require('./ssh');
 const fs = require('fs');
 const prompt = require('prompt');
 const yargs = require('yargs');
+const api = require('./api');
 const actions = ['new','remove','restore','list'];
 const options ={
 	'PACKAGE':{
@@ -20,7 +22,7 @@ const options ={
 		describe:'Name of package for which to create a Cloudpaging Studio VM.',
 		modes:['new','remove','restore']
 	},
-	'HOST':{
+	'SSH_HOST':{
 		alias:['host','h'],
 		describe:'HyperV host address on which to create this VM.',
 		modes:actions
@@ -156,5 +158,6 @@ const init = async ()=>{
 		
 	}
 	//console.log(promptResults);
+	await api[argv.action](argv.name);
 }
 init().catch(e=>{});

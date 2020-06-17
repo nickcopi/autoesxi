@@ -1,37 +1,47 @@
-require('dotenv').config();
+//require('dotenv').config();
 const fs = require('fs');
 const template = fs.readFileSync('template.vmx').toString();
 const NodeSSH = require('node-ssh');
-
+let ssh;
 const init = async ()=>{
 	//const ssh = await newConnection();
 	//const ls = await runCommand(ssh,'ls');
 	//await newVM('test2');
-	await removeVM('test2');
+	//await removeVM('test2');
 	//await restoreVM('test2');
 	//console.log(await getRestorable());
-	console.log('disposing...');
+	//console.log('disposing...');
 	//ssh.dispose();
+	ssh = await newConnection();
+}
+const destroy = async()=>{
+	ssh.dispose();
 }
 
 
 
 const getVMs = async ()=>{
-	return await getVMCache();
+	return await getVMCache().map(vm=>vm.VMName);
 }
 
 /*
  * Read VM cache from remote disk and return object
  * */
-const getVMCache = async (ssh)=>{
-	let newSession = false;
-	if(!ssh){
-		ssh = await newConnection();
-		newSession = true;
-	}
+const getVMCache = async ()=>{
+	//let newSession = false;
+	//if(!ssh){
+	//	ssh = await newConnection();
+	//	newSession = true;
+	//}
 	//await runCommand(ssh,'touch',[cachePath]);
 	const cache = await runCommand(ssh,'Get-VM | ConvertTo-JSON',null,null,true);
-	if(newSession) ssh.dispose();
+	//if(newSession){
+	//	try{
+	//		ssh.dispose();
+	//	}catch(e){
+
+	//	}
+	//}
 	try{
 		return JSON.parse(cache);
 	}
@@ -129,15 +139,21 @@ const dispose = async ssh=>{
 /*
  * Get a list of restorable VMs we have images for
  * */
-const getRestorable = async ssh=>{
-	let newSession = false;
-	if(!ssh){
-		ssh = await newConnection();
-		newSession = true;
-	}
+const getRestorable = async ()=>{
+	//let newSession = false;
+	//if(!ssh){
+	//	ssh = await newConnection();
+	//	newSession = true;
+	//}
 	//await runCommand(ssh,'touch',[cachePath]);
 	const cache = await runCommand(ssh,`Get-ChildItem -Path '${process.env.DUMP_PATH}' -Name '*' -File | ConvertTo-JSON`,null,process.env.DUMP_PATH);
-	if(newSession) ssh.dispose();
+	//if(newSession){
+	//	try{
+	//		ssh.dispose();
+	//	}catch(e){
+
+	//	}
+	//}
 	if(!cache) return [];
 	try{
 		const list = JSON.parse(cache);//.map(item=>item.Name);
@@ -185,10 +201,14 @@ const runCommand = async(ssh,command,args,path,getOutput)=>{
 	return await ssh.exec(command, args, { cwd: path, stream: 'stdout'}).catch(e=>console.error(e));
 }
 
-init();
+//init();
 
 module.exports = {
 	newVM,
 	getVMs,
-
+	getRestorable,
+	restoreVM,
+	removeVM,
+	init,
+	destroy
 }
