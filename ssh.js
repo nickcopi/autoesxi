@@ -109,7 +109,7 @@ const removeVM = async(name)=>{
 	await runCommand(ssh,'Stop-VM', ['-Name',name,'-TurnOff','-ErrorAction', 'SilentlyContinue']);
 	console.log('Deregistering VM....');
 	await runCommand(ssh,'Remove-VM', ['-Name',name,'-Force','-ErrorAction', 'SilentlyContinue']);
-	if(process.env.SAVE_VM){
+	if(!process.env.TRASH_VM){
 		console.log('Backing up VM image....');
 		await runCommand(ssh,'mv', ['-Force',imagePath,process.env.DUMP_PATH]);
 	} else {

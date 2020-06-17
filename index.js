@@ -18,22 +18,43 @@ const options ={
 	'PACKAGE':{
 		alias:['package','n','p','name'],
 		describe:'Name of package for which to create a Cloudpaging Studio VM.',
+		modes:['new','remove','restore']
 	},
 	'HOST':{
 		alias:['host','h'],
-		describe:'ESXI host address on which to create this VM.',
+		describe:'HyperV host address on which to create this VM.',
+		modes:actions
 	},
 	'SSH_USER':{
 		alias:['username','u','user'],
-		describe:'Username used to connect to the ESXI host.',
+		describe:'Username used to connect to the HyperV host.',
+		modes:actions
 	},
 	'STORE_PATH':{
 		alias:['store','s'],
-		describe:'Path on ESXI host of datastore on which to create this VM.',
+		describe:'Path on HyperV host of folder in which to create this VM.',
+		modes:['new','remove','restore']
 	},
 	'IMAGE_PATH':{
 		alias:['image','i'],
-		describe:'Path on ESXI host of the base image to be cloned to create this VM.',
+		describe:'Path on HyperV host of the base image to be cloned to create this VM.',
+		modes:['new']
+	},
+	'DUMP_PATH':{
+		alias:['dump','d'],
+		describe:'Path on HyperV host to store disk images after they have been removed so they can later be restored.',
+		modes:['new','list']
+	},
+	'SWITCH_NAME':{
+		alias:['switch'],
+		describe:'Name of virtual switch on HyperV host to connect to the VM.',
+		modes:['new','restore']
+	},
+	'TRASH_VM':{
+		alias:['trash','t'],
+		describe:'Don\'t save a copy of the VM disk when removing a VM. This will make it no longer later restorable',
+		modes:['remove']
+
 	},
 	'CONFIG':{
 		alias:['config','c'],
@@ -95,7 +116,6 @@ const init = async ()=>{
 			console.error('Failed to read config file, ' + e);
 		}
 	}
-	console.log(argv);
 	const promptOptions = [];
 	Object.entries(options).forEach(([k,v])=>{
 		if((!(k in argv)) && !v.ignorable){
@@ -110,7 +130,7 @@ const init = async ()=>{
 	promptOptions.push({
 		hidden:true,
 		name:'SSH_PASS',
-		description:'Password for authenticating with ESXI host. (Will not be echoed.)'
+		description:'Password for authenticating with HyperV host. (Will not be echoed.)'
 	});
 	if(promptOptions.length){
 		promptOptions.push({
