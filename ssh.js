@@ -72,7 +72,7 @@ const newVM = async(name)=>{
  * Restore a VM based on name
  * */
 const restoreVM = async(name)=>{
-	const ssh = await newConnection();
+	//const ssh = await newConnection();
 	const oldImage = process.env.DUMP_PATH + '\\' +  name + '.vhdx';
 	console.log('Checking cache....');
 	const cache = await getRestorable(ssh);
@@ -82,7 +82,7 @@ const restoreVM = async(name)=>{
 		return false;
 	}
 	const result = await createVM(ssh,name,oldImage);
-	await ssh.dispose();
+	//await ssh.dispose();
 	return result;
 }
 

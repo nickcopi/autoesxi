@@ -36,9 +36,15 @@ const removeVM = async (name)=>{
 	process.exit();
 }
 
+const restoreVM = async (name)=>{
+	await ssh.init();
+	await ssh.restoreVM(header + name);
+	process.exit();
+}
+
 module.exports = {
 	list,
 	newVM,
-//	restoreVM,
+	restoreVM,
 	removeVM
 }

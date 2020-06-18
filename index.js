@@ -173,6 +173,15 @@ const init = async ()=>{
 		case 'remove':
 			await api.removeVM(process.env.PACKAGE)
 			break;
+		case 'restore':
+			await api.restoreVM(process.env.PACKAGE)
+			break;
+		case 'configure':
+			console.log('Config written to config.json!');
+			break;
+		default:
+			console.error('Unknown action!');
+			break;
 	}
 }
 init().catch(e=>{console.error(e)});
