@@ -21,7 +21,7 @@ const destroy = async()=>{
 
 
 const getVMs = async ()=>{
-	return await getVMCache().map(vm=>vm.VMName);
+	return (await getVMCache()).map(vm=>vm.VMName);
 }
 
 /*

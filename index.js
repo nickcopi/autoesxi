@@ -9,7 +9,7 @@
  * */
 
 //require('dotenv').config();
-process.on('uncaughtException', ()=>{});
+//process.on('uncaughtException', ()=>{});
 //const esxi = require('./ssh');
 const fs = require('fs');
 const prompt = require('prompt');

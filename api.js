@@ -9,19 +9,19 @@ const list = async ()=>{
 	await ssh.init();
 	console.log('Querying server...');
 	let str = 'Active packaging VMs:\n';
-	console.log(await ssh.getVMs());
 	str += ((await ssh.getVMs().catch(e=>{}))
 		.filter(vm=>vm.includes(header))
 		.map(vm=>vm.replace(header,''))
 		.join('\n')
 	);
-	console.log('aaa');
 	str += 'Restorable VMs:\n';
-	str += (await (ssh.getRestorables())
+	str += ((await ssh.getRestorable())
+		.map(file=>file.replace('.vhdx','').replace(header,''))
 		.join('\n')
 	);
 	console.log(str);
-	ssh.destroy();
+	process.exit();
+	//ssh.destroy();
 }
 
 
