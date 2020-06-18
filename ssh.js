@@ -106,7 +106,7 @@ const createVM = async (ssh,name, sourceDisk)=>{
  * Remove a tracked VM based on a name and remove it crom cache
  * */
 const removeVM = async(name)=>{
-	const ssh = await newConnection();
+	//const ssh = await newConnection();
 	const imagePath = process.env.STORE_PATH + '\\' +  name + '.vhdx';
 	console.log('Checking cache....');
 	const cache = (await getVMCache(ssh)).map(vm=>vm.VMName);
@@ -119,14 +119,14 @@ const removeVM = async(name)=>{
 	await runCommand(ssh,'Stop-VM', ['-Name',name,'-TurnOff','-ErrorAction', 'SilentlyContinue']);
 	console.log('Deregistering VM....');
 	await runCommand(ssh,'Remove-VM', ['-Name',name,'-Force','-ErrorAction', 'SilentlyContinue']);
-	if(!process.env.TRASH_VM){
+	if(!process.env.TRASH_VM || process.env.TRASH_VM.toLowerCase() !== 'y'){
 		console.log('Backing up VM image....');
 		await runCommand(ssh,'mv', ['-Force',imagePath,process.env.DUMP_PATH]);
 	} else {
 		console.log('Removing Disk....');
 		await runCommand(ssh,'rm', [imagePath]);
 	}
-	await dispose(ssh);
+	//await dispose(ssh);
 	return true;
 }
 

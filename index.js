@@ -15,7 +15,7 @@ const fs = require('fs');
 const prompt = require('prompt');
 const yargs = require('yargs');
 const api = require('./api');
-const actions = ['new','remove','restore','list'];
+const actions = ['new','remove','restore','list','configure'];
 const options ={
 	'PACKAGE':{
 		alias:['package','n','p','name'],
@@ -36,28 +36,28 @@ const options ={
 	'STORE_PATH':{
 		alias:['store','s'],
 		describe:'Path on HyperV host of folder in which to create this VM.',
-		modes:['new','remove','restore']
+		modes:['new','remove','restore','configure']
 	},
 	'IMAGE_PATH':{
 		alias:['image','i'],
 		describe:'Path on HyperV host of the base image to be cloned to create this VM.',
-		modes:['new']
+		modes:['new','configure']
 	},
 	'DUMP_PATH':{
 		alias:['dump','d'],
 		describe:'Path on HyperV host to store disk images after they have been removed so they can later be restored.',
-		modes:['restore','remove','list']
+		modes:['restore','remove','list','configure']
 	},
 	'SWITCH_NAME':{
 		alias:['switch'],
 		describe:'Name of virtual switch on HyperV host to connect to the VM.',
-		modes:['new','restore']
+		modes:['new','restore','configure']
 	},
 	'TRASH_VM':{
 		alias:['trash','t'],
-		describe:'Don\'t save a copy of the VM disk when removing a VM. This will make it no longer later restorable',
-		modes:['remove']
-
+		describe:'Don\'t save a copy of the VM disk when removing a VM. This will make it no longer later restorable [y/N]',
+		modes:['remove','configure'],
+		default:'N'
 	},
 	'CONFIG':{
 		alias:['config','c'],
@@ -134,12 +134,16 @@ const init = async ()=>{
 			});
 		}
 	});
-	promptOptions.push({
-		hidden:true,
-		name:'SSH_PASS',
-		description:'Password for authenticating with HyperV host. (Will not be echoed.)'
-	});
-	if(promptOptions.length){
+	if(argv.action !== 'configure'){
+		promptOptions.push({
+			hidden:true,
+			name:'SSH_PASS',
+			description:'Password for authenticating with HyperV host. (Will not be echoed.)'
+		});
+	}
+	if(argv.action === 'configure'){
+		argv.SAVE = 'y';
+	}else if(promptOptions.some(option=>options[option.name] && !options[option.name].ignorable)){
 		promptOptions.push({
 			name:'SAVE',
 			description:'Write options out to a config.json file? (Will overwrite!) [y/N]'
@@ -147,7 +151,7 @@ const init = async ()=>{
 	}
 	const promptResults = await getInput(prompt,promptOptions);
 	process.env = {...process.env,...argv,...promptResults};
-	if(process.env.SAVE.toLowerCase() === 'y'){
+	if(process.env.SAVE && process.env.SAVE.toLowerCase() === 'y'){
 		const config = {};
 		Object.entries(options).forEach(([k,v])=>{
 			if(!v.ignorable){
@@ -166,6 +170,9 @@ const init = async ()=>{
 		case 'new':
 			await api.newVM(process.env.PACKAGE)
 			break;
+		case 'remove':
+			await api.removeVM(process.env.PACKAGE)
+			break;
 	}
 }
-init().catch(e=>{});
+init().catch(e=>{console.error(e)});

@@ -14,7 +14,7 @@ const list = async ()=>{
 		.map(vm=>vm.replace(header,''))
 		.join('\n')
 	);
-	str += 'Restorable VMs:\n';
+	str += '\nRestorable VMs:\n';
 	str += ((await ssh.getRestorable())
 		.map(file=>file.replace('.vhdx','').replace(header,''))
 		.join('\n')
@@ -30,10 +30,15 @@ const newVM = async (name)=>{
 	process.exit();
 }
 
+const removeVM = async (name)=>{
+	await ssh.init();
+	await ssh.removeVM(header + name);
+	process.exit();
+}
 
 module.exports = {
 	list,
 	newVM,
 //	restoreVM,
-//	removeVM
+	removeVM
 }
