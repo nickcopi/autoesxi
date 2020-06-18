@@ -178,7 +178,10 @@ const newConnection = async()=>{
 				finish([process.env.SSH_PASS])
 			}
 		}
-	}).catch(e=>console.error(e));
+	}).catch(e=>{
+		console.error(e.toString());
+		process.exit();
+	});
 	return ssh;
 }
 
