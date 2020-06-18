@@ -55,7 +55,7 @@ const getVMCache = async ()=>{
  * Create and track a VM based on a name and save it in a cache
  * */
 const newVM = async(name)=>{
-	const ssh = await newConnection();
+	//const ssh = await newConnection();
 	console.log('Checking cache....');
 	const cache = (await getVMCache(ssh)).map(vm=>vm.VMName);
 	if(cache.includes(name)){
@@ -64,7 +64,7 @@ const newVM = async(name)=>{
 		return false;
 	}
 	const result = await createVM(ssh,name,process.env.IMAGE_PATH);
-	await ssh.dispose();
+	//await ssh.dispose();
 	return result;
 }
 

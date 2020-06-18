@@ -20,7 +20,8 @@ const options ={
 	'PACKAGE':{
 		alias:['package','n','p','name'],
 		describe:'Name of package for which to create a Cloudpaging Studio VM.',
-		modes:['new','remove','restore']
+		modes:['new','remove','restore'],
+		ignorable:true
 	},
 	'SSH_HOST':{
 		alias:['host','h'],
@@ -158,6 +159,13 @@ const init = async ()=>{
 		
 	}
 	//console.log(promptResults);
-	await api[argv.action](argv.name);
+	switch(argv.action){
+		case 'list':
+			await api.list();
+			break;
+		case 'new':
+			await api.newVM(process.env.PACKAGE)
+			break;
+	}
 }
 init().catch(e=>{});

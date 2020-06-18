@@ -24,10 +24,16 @@ const list = async ()=>{
 	//ssh.destroy();
 }
 
+const newVM = async (name)=>{
+	await ssh.init();
+	await ssh.newVM(header + name);
+	process.exit();
+}
+
 
 module.exports = {
 	list,
-//	newVM,
+	newVM,
 //	restoreVM,
 //	removeVM
 }
