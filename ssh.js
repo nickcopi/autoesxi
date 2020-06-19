@@ -1,6 +1,4 @@
 //require('dotenv').config();
-const fs = require('fs');
-const template = fs.readFileSync('template.vmx').toString();
 const NodeSSH = require('node-ssh');
 let ssh;
 const init = async ()=>{

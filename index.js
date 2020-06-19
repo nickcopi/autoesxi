@@ -19,13 +19,13 @@ const actions = ['new','remove','restore','list','configure'];
 const options ={
 	'PACKAGE':{
 		alias:['package','n','p','name'],
-		describe:'Name of package for which to create a Cloudpaging Studio VM.',
+		describe:'Name of package for which to take an action.',
 		modes:['new','remove','restore'],
 		ignorable:true
 	},
 	'SSH_HOST':{
 		alias:['host','h'],
-		describe:'HyperV host address on which to create this VM.',
+		describe:'HyperV host address on which to take an action',
 		modes:actions
 	},
 	'SSH_USER':{
@@ -35,7 +35,7 @@ const options ={
 	},
 	'STORE_PATH':{
 		alias:['store','s'],
-		describe:'Path on HyperV host of folder in which to create this VM.',
+		describe:'Path on HyperV host of folder in which to store this VM.',
 		modes:['new','remove','restore','configure']
 	},
 	'IMAGE_PATH':{

@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "pkg index.js -t node12-win-x64 -o AutoHyperV.exe"
   },
   "author": "",
   "license": "ISC",
