@@ -1,0 +1,6 @@
+{
+	"name":"Auto HyperV",
+	"tags":["Tools"],
+	"description":"Automatically deploy, backup, and remove VMs on a remote Windows HyperV host over SSH.",
+	"date":"May 2020"
+}
